@@ -85,9 +85,89 @@ with col_text:
     # ======================================
 
 with col_map:
-    # ====== INSERT WORLD MAP CODE HERE ======
-    # Example: st.image('path/to/map.png')
-    # Or use plotly/folium for interactive map
+    with col_map:
+    st.write("### World view")
+    st.caption("Green ≈ better USD buying power · Red ≈ stronger local currency vs USD")
+
+    # --- coordinates for each place ---
+    coords = {
+        "BRL": {"name": "Brazil", "lat": -14.2350, "lon": -51.9253, "code": "BRL"},
+        "EUR": {"name": "Europe", "lat": 54.5260,  "lon": 15.2551,  "code": "EUR"},
+        "JPY": {"name": "Japan",  "lat": 36.2048,  "lon": 138.2529, "code": "JPY"},
+        "ZAR": {"name": "South Africa", "lat": 30.5595, "lon": 22.9375, "code": "ZAR"},
+        # Add a US reference marker if you like:
+        "USD": {"name": "United States", "lat": 39.8283, "lon": -98.5795, "code": "USD"},
+    }
+
+    # --- color logic similar to your donuts ---
+    def color_for(code, pct):
+        if code == "BRL":
+            return "#90EE90" if pct < 25 else "#FFB6C6"
+        if code == "EUR":
+            return "#FFB6C6" if pct >= 100 else "#90EE90"
+        if code == "JPY":
+            return "#90EE90" if pct < 1 else "#FFB6C6"
+        if code == "ZAR":
+            return "#90EE90" if pct < 10 else "#FFB6C6"
+        # USD reference marker (neutral gray)
+        return "#A9A9A9"
+
+    lats, lons, texts, colors, sizes = [], [], [], [], []
+
+    for k, meta in coords.items():
+        if k == "USD":
+            # optional neutral US marker
+            lats.append(meta["lat"]); lons.append(meta["lon"])
+            texts.append("United States<br>Base currency: USD")
+            colors.append("#A9A9A9")
+            sizes.append(8)
+            continue
+
+        rate = currencies[k]["rate"]
+        pct  = currencies[k]["percentage"]
+        dt   = currencies[k]["date"].strftime("%Y-%m-%d")
+
+        lats.append(meta["lat"])
+        lons.append(meta["lon"])
+        texts.append(
+            f"<b>{meta['name']}</b>"
+            f"<br>1 USD = {rate:.2f} {meta['code']}"
+            f"<br>USD per 1 {meta['code']}: {1/rate:.4f}"
+            f"<br>Date: {dt}"
+        )
+        colors.append(color_for(k, pct))
+        # scale marker size a bit by “favorability” (smaller % = bigger marker)
+        # clamp to reasonable bounds
+        size = max(8, min(18, 18 - (pct if k != "EUR" else (min(pct, 160) / 4))))
+        sizes.append(size)
+
+    map_fig = go.Figure(
+        go.Scattergeo(
+            lat=lats,
+            lon=lons,
+            mode="markers",
+            marker=dict(size=sizes, color=colors, line=dict(width=0.5, color="#444")),
+            hovertemplate="%{text}<extra></extra>",
+            text=texts,
+        )
+    )
+
+    map_fig.update_layout(
+        height=520,
+        margin=dict(l=0, r=0, t=0, b=0),
+        geo=dict(
+            projection_type="natural earth",
+            showcountries=True,
+            showocean=True,
+            oceancolor="rgb(230, 240, 255)",
+            lakecolor="rgb(230, 240, 255)",
+            landcolor="rgb(245, 245, 245)",
+            coastlinecolor="rgb(150, 150, 150)",
+            showframe=False,
+        ),
+    )
+
+    st.plotly_chart(map_fig, use_container_width=True)
     pass
     # ========================================
 
